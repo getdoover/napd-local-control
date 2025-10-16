@@ -5,11 +5,23 @@ from pydoover import config
 
 class NapdLocalControlConfig(config.Schema):
     def __init__(self):
-        self.outputs_enabled = config.Boolean("Digital Outputs Enabled", default=True)
-        self.funny_message = config.String("A Funny Message")  # this will be required as no default given.
-
-        self.sim_app_key = config.Application("Simulator App Key", description="The app key for the simulator")
-
+        self.pump_controllers = config.Array(
+            "Pump Controllers",
+            element=config.Application("Pump Controller", description="A pump controller application"),
+            description="List of pump controller applications"
+        )
+        
+        self.solar_controllers = config.Array(
+            "Solar Controllers", 
+            element=config.Application("Solar Controller", description="A solar controller application"),
+            description="List of solar controller applications"
+        )
+        
+        self.flow_sensor_app = config.Application("Flow Sensor App", description="A flow sensor application")
+        
+        self.pressure_sensor_app = config.Application("Pressure Sensor App", description="A pressure sensor application")
+            
+        self.tank_level_app = config.Application("Tank Level App", description="The tank level application")
 
 def export():
     NapdLocalControlConfig().export(Path(__file__).parents[2] / "doover_config.json", "napd_local_control")

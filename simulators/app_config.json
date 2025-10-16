@@ -1,6 +1,13 @@
 {
-    "simulator_app_key": "sim_app_key",
-    "digital_input_count": 1,
-    "digital_output_count": 2,
-    "a_funny_message": "yeeha"
-}
+    "tank_level_app": "analog_level_sensor-1",
+    "flow_sensor_app": "YKFPdyPNwi",
+    "pump_controllers": [
+      "sia_injection_controller-1",
+      "sia_injection_controller-2"
+    ],
+    "solar_controllers": [
+      "morningstar_prostar_app-1",
+      "morningstar_prostar_app-2"
+    ],
+    "pressure_sensor_app": "OVMKT"
+  }
