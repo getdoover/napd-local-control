@@ -55,6 +55,13 @@
                     "type": "integer",
                     "description": "The stop pump pin"
                 },
+                "potentiometer_pin": {
+                    "title": "Potentiometer Pin",
+                    "x-name": "potentiometer_pin",
+                    "x-hidden": false,
+                    "type": "integer",
+                    "description": "The potentiometer (ai) pin"
+                },
                 "solar_controllers": {
                     "title": "Solar Controllers",
                     "x-name": "solar_controllers",
@@ -102,6 +109,7 @@
                 "selector_pin",
                 "start_pump_pin",
                 "stop_pump_pin",
+                "potentiometer_pin",
                 "solar_controllers",
                 "flow_sensor_app",
                 "pressure_sensor_app",
