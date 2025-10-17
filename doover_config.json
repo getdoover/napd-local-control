@@ -18,33 +18,99 @@
             "title": "Application Config",
             "type": "object",
             "properties": {
-                "digital_outputs_enabled": {
-                    "title": "Digital Outputs Enabled",
-                    "x-name": "digital_outputs_enabled",
-                    "x-hidden": false,
-                    "type": "boolean",
-                    "default": true
-                },
-                "a_funny_message": {
-                    "title": "A Funny Message",
-                    "x-name": "a_funny_message",
-                    "x-hidden": false,
-                    "type": "string"
-                },
-                "simulator_app_key": {
+                "pump_1": {
                     "format": "doover-application",
-                    "title": "Simulator App Key",
-                    "x-name": "simulator_app_key",
+                    "title": "Pump 1",
+                    "x-name": "pump_1",
                     "x-hidden": false,
                     "type": "string",
-                    "description": "The app key for the simulator"
+                    "description": "The pump 1 application"
+                },
+                "pump_2": {
+                    "format": "doover-application",
+                    "title": "Pump 2",
+                    "x-name": "pump_2",
+                    "x-hidden": false,
+                    "type": "string",
+                    "description": "The pump 2 application"
+                },
+                "selector_pin": {
+                    "title": "Selector Pin",
+                    "x-name": "selector_pin",
+                    "x-hidden": false,
+                    "type": "integer",
+                    "description": "The selector pin"
+                },
+                "start_pump_pin": {
+                    "title": "Start Pump Pin",
+                    "x-name": "start_pump_pin",
+                    "x-hidden": false,
+                    "type": "integer",
+                    "description": "The start pump pin"
+                },
+                "stop_pump_pin": {
+                    "title": "Stop Pump Pin",
+                    "x-name": "stop_pump_pin",
+                    "x-hidden": false,
+                    "type": "integer",
+                    "description": "The stop pump pin"
+                },
+                "solar_controllers": {
+                    "title": "Solar Controllers",
+                    "x-name": "solar_controllers",
+                    "x-hidden": false,
+                    "type": "array",
+                    "description": "List of solar controller applications",
+                    "items": {
+                        "format": "doover-application",
+                        "title": "Solar Controller",
+                        "x-name": "solar_controller",
+                        "x-hidden": false,
+                        "type": "string",
+                        "description": "A solar controller application"
+                    }
+                },
+                "flow_sensor_app": {
+                    "format": "doover-application",
+                    "title": "Flow Sensor App",
+                    "x-name": "flow_sensor_app",
+                    "x-hidden": false,
+                    "type": "string",
+                    "description": "A flow sensor application"
+                },
+                "pressure_sensor_app": {
+                    "format": "doover-application",
+                    "title": "Pressure Sensor App",
+                    "x-name": "pressure_sensor_app",
+                    "x-hidden": false,
+                    "type": "string",
+                    "description": "A pressure sensor application"
+                },
+                "tank_level_app": {
+                    "format": "doover-application",
+                    "title": "Tank Level App",
+                    "x-name": "tank_level_app",
+                    "x-hidden": false,
+                    "type": "string",
+                    "description": "The tank level application"
                 }
             },
             "additionalElements": true,
             "required": [
-                "a_funny_message",
-                "simulator_app_key"
+                "pump_1",
+                "pump_2",
+                "selector_pin",
+                "start_pump_pin",
+                "stop_pump_pin",
+                "solar_controllers",
+                "flow_sensor_app",
+                "pressure_sensor_app",
+                "tank_level_app"
             ]
-        }
+        },
+        "key": "f0fb1de9-a6ee-4f53-8fdf-bf88926ce638",
+        "code_repo_key": null,
+        "repo_branch": "main",
+        "staging_config": {}
     }
 }
