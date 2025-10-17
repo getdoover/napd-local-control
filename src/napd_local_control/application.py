@@ -72,9 +72,9 @@ class NapdLocalControlApplication(Application):
         target_rate = round(ai_input / sys_voltage * 100, 2)
         
         if pump_number == 1:
-            self.set_tag("TargetRatePercentage", target_rate, self.config.pump_1.value)
+            await self.set_tag("TargetRatePercentage", target_rate, self.config.pump_1.value)
         elif pump_number == 2:
-            self.set_tag("TargetRatePercentage", target_rate, self.config.pump_2.value)
+            await self.set_tag("TargetRatePercentage", target_rate, self.config.pump_2.value)
         self.last_ai_input = ai_input
         
     async def selector_button_callback(self, di, di_value, dt_secs, counter, edge):
@@ -97,9 +97,9 @@ class NapdLocalControlApplication(Application):
     async def update_pump_state_tag(self, pump_number, state):
         
         if pump_number == 1:
-            self.set_tag("StateString", state, self.config.pump_1.value)
+            await self.set_tag("StateString", state, self.config.pump_1.value)
         elif pump_number == 2:
-            self.set_tag("StateString", state, self.config.pump_2.value)
+            await self.set_tag("StateString", state, self.config.pump_2.value)
         
 
     async def update_dashboard_data(self):
