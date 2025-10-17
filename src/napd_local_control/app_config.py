@@ -13,6 +13,8 @@ class NapdLocalControlConfig(config.Schema):
         self.start_pump_pin = config.Integer("Start Pump Pin", description="The start pump (ai) pin")
         self.stop_pump_pin = config.Integer("Stop Pump Pin", description="The stop pump pin")
         
+        self.potentiometer_pin = config.Integer("Potentiometer Pin", description="The potentiometer (ai) pin")
+        
         self.solar_controllers = config.Array(
             "Solar Controllers", 
             element=config.Application("Solar Controller", description="A solar controller application"),

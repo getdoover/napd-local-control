@@ -50,6 +50,8 @@ class NapdLocalControlApplication(Application):
             rate_window_secs=60,
         )
         
+        self.last_ai_input = await self.platform_iface.get_ai(self.config.potentiometer_pin.value)
+        
         log.info("Dashboard started on port 8092")
 
     async def main_loop(self):
@@ -57,7 +59,23 @@ class NapdLocalControlApplication(Application):
         # self.get_tag("tank_level", self.config.tank_level_app.value)
         # a random value we set inside our simulator. Go check it out in simulators/sample!
         # Update dashboard with example data
+        await self.update_target_rate()
         await self.update_dashboard_data()
+        
+    async def update_target_rate(self):
+        pump_number = self.dashboard_interface.getSelectedPump()
+        ai_input = await self.platform_iface.get_ai(self.config.potentiometer_pin.value)
+        if ai_input < self.last_ai_input * 1.01 and ai_input > self.last_ai_input * 0.99:
+            return
+        
+        sys_voltage = self.get_tag("sys_voltage", "platform")
+        target_rate = round(ai_input / sys_voltage * 100, 2)
+        
+        if pump_number == 1:
+            self.set_tag("TargetRatePercentage", target_rate, self.config.pump_1.value)
+        elif pump_number == 2:
+            self.set_tag("TargetRatePercentage", target_rate, self.config.pump_2.value)
+        self.last_ai_input = ai_input
         
     async def selector_button_callback(self, di, di_value, dt_secs, counter, edge):
         self.dashboard_interface.toggleSelectedPump()
@@ -88,9 +106,9 @@ class NapdLocalControlApplication(Application):
         """Update dashboard with data from various sources."""
         # try:
             # Get pump control data from simulators
-        target_rate = self.get_tag("TargetRate", self.config.pump_controllers.elements[0].value) if self.config.pump_controllers else 15.5
-        flow_rate = self.get_tag("FlowRate", self.config.pump_controllers.elements[0].value) if self.config.pump_controllers else 14.2
-        pump_state = self.get_tag("StateString", self.config.pump_controllers.elements[0].value) if self.config.pump_controllers else "auto"
+        target_rate = self.get_tag("TargetRate", self.config.pump_1.value) 
+        flow_rate = self.get_tag("FlowRate", self.config.pump_1.value) 
+        pump_state = self.get_tag("StateString", self.config.pump_1.value) 
         
         # Update pump data
         self.dashboard_interface.update_pump_data(
@@ -101,9 +119,9 @@ class NapdLocalControlApplication(Application):
         
         # Get pump 2 control data from simulators
         if len(self.config.pump_controllers.elements) > 1:
-            pump2_target_rate = self.get_tag("TargetRate", self.config.pump_controllers.elements[1].value)
-            pump2_flow_rate = self.get_tag("FlowRate", self.config.pump_controllers.elements[1].value)
-            pump2_pump_state = self.get_tag("StateString", self.config.pump_controllers.elements[1].value)
+            pump2_target_rate = self.get_tag("TargetRate", self.config.pump_2.value)
+            pump2_flow_rate = self.get_tag("FlowRate", self.config.pump_2.value)
+            pump2_pump_state = self.get_tag("StateString", self.config.pump_2.value)
         else:
             # Fallback values for pump 2 if not configured
             pump2_target_rate = "-"
