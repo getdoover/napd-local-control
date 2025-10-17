@@ -68,7 +68,7 @@ class NapdLocalControlApplication(Application):
         if ai_input < self.last_ai_input * 1.01 and ai_input > self.last_ai_input * 0.99:
             return
         
-        sys_voltage = self.get_tag("sys_voltage", "platform")
+        sys_voltage = self.get_tag("voltage", "platform")
         target_rate = round(ai_input / sys_voltage * 100, 2)
         
         if pump_number == 1:
@@ -118,15 +118,15 @@ class NapdLocalControlApplication(Application):
         )
         
         # Get pump 2 control data from simulators
-        if len(self.config.pump_controllers.elements) > 1:
-            pump2_target_rate = self.get_tag("TargetRate", self.config.pump_2.value)
-            pump2_flow_rate = self.get_tag("FlowRate", self.config.pump_2.value)
-            pump2_pump_state = self.get_tag("StateString", self.config.pump_2.value)
-        else:
-            # Fallback values for pump 2 if not configured
-            pump2_target_rate = "-"
-            pump2_flow_rate = "-"
-            pump2_pump_state = "-"
+        # if len(self.config.pump_controllers.elements) > 1:
+        pump2_target_rate = self.get_tag("TargetRate", self.config.pump_2.value)
+        pump2_flow_rate = self.get_tag("FlowRate", self.config.pump_2.value)
+        pump2_pump_state = self.get_tag("StateString", self.config.pump_2.value)
+        # else:
+        #     # Fallback values for pump 2 if not configured
+        #     pump2_target_rate = "-"
+        #     pump2_flow_rate = "-"
+        #     pump2_pump_state = "-"
         
         # Update pump 2 data
         self.dashboard_interface.update_pump2_data(
