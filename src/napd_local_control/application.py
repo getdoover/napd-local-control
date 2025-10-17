@@ -26,6 +26,30 @@ class NapdLocalControlApplication(Application):
         
         # Start dashboard
         self.dashboard_interface.start_dashboard()
+        
+        ## create button and dial pulse counting subs
+        
+        self.selector_button = self.plt_iface.get_new_pulse_counter(
+            di=self.config.selector_pin.value,
+            edge="rising",
+            callback=self.selector_button_callback,
+            rate_window_secs=60,
+        )
+        
+        self.start_pump = self.plt_iface.get_new_pulse_counter(
+            di=self.config.start_pump_pin.value,
+            edge="VI+10",
+            callback=self.start_pump_callback,
+            rate_window_secs=60,
+        )
+        
+        self.stop_pump = self.plt_iface.get_new_pulse_counter(
+            di=self.config.stop_pump_pin.value,
+            edge="falling",
+            callback=self.stop_pump_callback,
+            rate_window_secs=60,
+        )
+        
         log.info("Dashboard started on port 8092")
 
     async def main_loop(self):
@@ -34,7 +58,32 @@ class NapdLocalControlApplication(Application):
         # a random value we set inside our simulator. Go check it out in simulators/sample!
         # Update dashboard with example data
         await self.update_dashboard_data()
-    
+        
+    async def selector_button_callback(self, di, di_value, dt_secs, counter, edge):
+        self.dashboard_interface.toggleSelectedPump()
+        
+    async def start_pump_callback(self, di, di_value, dt_secs, counter, edge):
+        # self.dashboard_interface.start_pump()
+        self.dashboard_interface.updateSelectedPumpState("pumping")
+        pump_number = self.dashboard_interface.getSelectedPump()
+        log.info(f"Starting Pump {pump_number}")
+        self.update_pump_state_tag(pump_number, 2)
+        
+    async def stop_pump_callback(self, di, di_value, dt_secs, counter, edge):
+        # self.dashboard_interface.stop_pump()
+        self.dashboard_interface.updateSelectedPumpState("standby")
+        pump_number = self.dashboard_interface.getSelectedPump()
+        log.info(f"Stopping Pump {pump_number}")
+        self.update_pump_state_tag(pump_number, 0)
+        
+    async def update_pump_state_tag(self, pump_number, state):
+        
+        if pump_number == 1:
+            self.set_tag("StateString", state, self.config.pump_1.value)
+        elif pump_number == 2:
+            self.set_tag("StateString", state, self.config.pump_2.value)
+        
+
     async def update_dashboard_data(self):
         """Update dashboard with data from various sources."""
         # try:

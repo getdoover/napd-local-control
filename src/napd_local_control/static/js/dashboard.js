@@ -11,10 +11,12 @@ class Dashboard {
         this.maxReconnectAttempts = 10;
         this.reconnectDelay = 2000;
         this.data = {};
+        this.selectedPump = 1; // Default to pump 1
         
         this.initializeElements();
         this.initializeSocket();
         this.setupEventListeners();
+        this.updatePumpSelection();
     }
     
     initializeElements() {
@@ -54,6 +56,10 @@ class Dashboard {
         
         // Loading overlay
         this.loadingOverlay = document.getElementById('loading-overlay');
+        
+        // Pump control elements
+        this.pumpControl1 = document.getElementById('pump-control-1');
+        this.pumpControl2 = document.getElementById('pump-control-2');
     }
     
     initializeSocket() {
@@ -106,6 +112,14 @@ class Dashboard {
             console.error('Socket error:', error);
             this.showError(error.message || 'Unknown error occurred');
         });
+        
+        // Pump selection events
+        this.socket.on('pump_selection_changed', (data) => {
+            console.log('Received pump selection change:', data);
+            if (data.selected_pump) {
+                this.setSelectedPump(data.selected_pump, true); // true = fromWebSocket
+            }
+        });
     }
     
     setupEventListeners() {
@@ -122,6 +136,8 @@ class Dashboard {
         setTimeout(() => {
             if (this.isConnected) {
                 this.socket.emit('request_data');
+                // Request current pump selection
+                this.socket.emit('request_pump_selection');
             }
         }, 1000);
     }
@@ -387,6 +403,51 @@ class Dashboard {
         }, 5000);
     }
     
+    // Pump selection methods
+    updatePumpSelection() {
+        // Remove selected class from both pumps
+        this.pumpControl1.classList.remove('selected-pump');
+        this.pumpControl2.classList.remove('selected-pump');
+        
+        // Add selected class to the currently selected pump
+        if (this.selectedPump === 1) {
+            this.pumpControl1.classList.add('selected-pump');
+        } else {
+            this.pumpControl2.classList.add('selected-pump');
+        }
+    }
+    
+    toggleSelectedPump() {
+        // Switch between pump 1 and pump 2
+        this.selectedPump = this.selectedPump === 1 ? 2 : 1;
+        this.updatePumpSelection();
+        console.log(`Selected pump changed to: ${this.selectedPump}`);
+        return this.selectedPump;
+    }
+    
+    getSelectedPump() {
+        return this.selectedPump;
+    }
+    
+    setSelectedPump(pumpNumber, fromWebSocket = false) {
+        if (pumpNumber === 1 || pumpNumber === 2) {
+            this.selectedPump = pumpNumber;
+            this.updatePumpSelection();
+            console.log(`Selected pump set to: ${this.selectedPump}`);
+            
+            // Only emit WebSocket event if not called from WebSocket (to avoid loops)
+            if (!fromWebSocket && this.isConnected) {
+                this.socket.emit('pump_selection_changed', {
+                    selected_pump: this.selectedPump,
+                    timestamp: new Date().toISOString()
+                });
+            }
+        } else {
+            console.error('Invalid pump number. Must be 1 or 2.');
+        }
+        return this.selectedPump;
+    }
+
     // Public API methods
     requestData() {
         if (this.isConnected) {
@@ -420,6 +481,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     window.location.reload();
                     break;
             }
+        }
+        
+        // Pump selection shortcut (P key)
+        if (e.key === 'p' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault();
+            window.dashboard.toggleSelectedPump();
         }
     });
     

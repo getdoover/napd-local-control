@@ -153,6 +153,25 @@ body {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(clamp(100px, 12vw, 160px), 1fr));
     gap: clamp(8px, 1.5vw, 15px);
+    margin-bottom: 10px;
+    border: 2px solid transparent;
+    border-radius: clamp(5px, 1vw, 10px);
+    transition: border-color 0.3s ease;
+}
+
+/* Selected pump highlighting */
+.controls-grid.selected-pump {
+    border-color: #ff8c00;
+    box-shadow: 0 0 0 2px rgba(255, 140, 0, 0.2);
+}
+
+/* Control headings */
+.control-heading {
+    text-align: center;
+}
+
+.controls-grid:last-child {
+    margin-bottom: 0;
 }
 
 /* Control cards */
@@ -172,7 +191,7 @@ body {
 
 .control-card h3 {
     color: #2c3e50;
-    font-size: 1rem;
+    font-size: 1.5rem;
     margin-bottom: 10px;
     font-weight: 600;
 }
@@ -183,6 +202,11 @@ body {
     flex-direction: column;
     align-items: center;
     gap: 5px;
+}
+
+/* Custom styling for pump control label */
+.value-display#pump-control-label {
+    margin-top: 10px;
 }
 
 .value {
@@ -199,7 +223,8 @@ body {
 
 /* State displays */
 .state-display {
-    margin-bottom: clamp(6px, 1vh, 10px);
+    margin-top: 10px;
+    margin-bottom: 10px;
 }
 
 .state-value {
@@ -446,7 +471,7 @@ body {
     }
     
     .control-card h3 {
-        font-size: clamp(0.6rem, 1.5vw, 0.8rem);
+        font-size: 1.2rem;
         margin-bottom: clamp(4px, 0.8vh, 6px);
     }
     

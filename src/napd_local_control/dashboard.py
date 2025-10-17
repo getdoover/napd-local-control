@@ -119,10 +119,11 @@ class DashboardData:
 class NAPDDashboard:
     """Flask dashboard with WebSocket support for SIA Local Control UI."""
     
-    def __init__(self, host: str = "0.0.0.0", port: int = 8092, debug: bool = False):
+    def __init__(self, host: str = "0.0.0.0", port: int = 8092, debug: bool = False, interface=None):
         self.host = host
         self.port = port
         self.debug = debug
+        self.interface = interface  # Reference to DashboardInterface
         
         # Create Flask app
         self.app = Flask(__name__, 
@@ -189,6 +190,23 @@ class NAPDDashboard:
             """Handle explicit data request from client."""
             emit('data_update', self.data.to_dict())
         
+        @self.socketio.on('request_pump_selection')
+        def handle_pump_selection_request():
+            """Handle pump selection request from client."""
+            if self.interface:
+                # Get current pump selection from interface
+                selected_pump = self.interface.getSelectedPump()
+                emit('pump_selection_changed', {
+                    'selected_pump': selected_pump,
+                    'timestamp': datetime.now().isoformat()
+                })
+            else:
+                # Fallback to default
+                emit('pump_selection_changed', {
+                    'selected_pump': 1,  # Default to pump 1
+                    'timestamp': datetime.now().isoformat()
+                })
+        
         @self.socketio.on('set_pump_state')
         def handle_pump_state_change(data):
             """Handle pump state change from client."""
@@ -202,6 +220,17 @@ class NAPDDashboard:
                     self.broadcast_update()
             except Exception as e:
                 log.error(f"Error handling pump state change: {e}")
+                emit('error', {'message': str(e)})
+        
+        @self.socketio.on('toggle_selected_pump')
+        def handle_toggle_selected_pump():
+            """Handle pump selection toggle from client."""
+            try:
+                # Emit a response that the client can handle
+                emit('pump_selection_toggled', {'message': 'Pump selection toggle requested'})
+                log.info("Pump selection toggle requested from client")
+            except Exception as e:
+                log.error(f"Error handling pump selection toggle: {e}")
                 emit('error', {'message': str(e)})
     
     def broadcast_update(self):
@@ -259,9 +288,17 @@ class NAPDDashboard:
 class DashboardInterface:
     """Interface class to integrate dashboard with Application class."""
     
-    def __init__(self, dashboard: NAPDDashboard):
-        self.dashboard = dashboard
+    def __init__(self, dashboard: NAPDDashboard = None):
+        if dashboard is None:
+            # Create dashboard with reference to this interface
+            self.dashboard = NAPDDashboard(interface=self)
+        else:
+            self.dashboard = dashboard
+            # Set the interface reference in the dashboard
+            self.dashboard.interface = self
+        
         self._server_thread = None
+        self.selected_pump = 1  # Default to pump 1
     
     def start_dashboard(self):
         """Start dashboard in a separate thread."""
@@ -272,6 +309,9 @@ class DashboardInterface:
         self._server_thread = threading.Thread(target=self._dashboard_thread_start, daemon=True)
         self._server_thread.start()
         log.info("Dashboard started in background thread")
+        
+        # Broadcast initial pump selection after a short delay
+        threading.Timer(2.0, self.broadcast_pump_selection).start()
     
     def _dashboard_thread_start(self):
         """Thread-safe dashboard startup."""
@@ -354,3 +394,86 @@ class DashboardInterface:
     def update_system_status(self, status: str):
         """Update system status."""
         self.dashboard.update_data(system={'status': status})
+    
+    def toggleSelectedPump(self):
+        """Toggle between pump 1 and pump 2 selection."""
+        self.selected_pump = 2 if self.selected_pump == 1 else 1
+        log.info(f"Selected pump changed to: {self.selected_pump}")
+        
+        # Emit WebSocket event to update all connected clients
+        self.dashboard.socketio.emit('pump_selection_changed', {
+            'selected_pump': self.selected_pump,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+        return self.selected_pump
+    
+    def getSelectedPump(self):
+        """Get the currently selected pump number."""
+        return self.selected_pump
+    
+    def setSelectedPump(self, pump_number: int):
+        """Set the selected pump number (1 or 2)."""
+        if pump_number in [1, 2]:
+            self.selected_pump = pump_number
+            log.info(f"Selected pump set to: {self.selected_pump}")
+            
+            # Emit WebSocket event to update all connected clients
+            self.dashboard.socketio.emit('pump_selection_changed', {
+                'selected_pump': self.selected_pump,
+                'timestamp': datetime.now().isoformat()
+            })
+        else:
+            log.error(f"Invalid pump number: {pump_number}. Must be 1 or 2.")
+        return self.selected_pump
+    
+    def broadcast_pump_selection(self):
+        """Broadcast current pump selection to all connected clients."""
+        self.dashboard.socketio.emit('pump_selection_changed', {
+            'selected_pump': self.selected_pump,
+            'timestamp': datetime.now().isoformat()
+        })
+        log.info(f"Broadcasted pump selection: {self.selected_pump}")
+    
+    def updateSelectedTargetRate(self, value: float):
+        """Update the target rate of the currently selected pump."""
+        try:
+            if self.selected_pump == 1:
+                self.update_pump_data(target_rate=value)
+            elif self.selected_pump == 2:
+                self.update_pump2_data(target_rate=value)
+            else:
+                log.error(f"Invalid selected pump: {self.selected_pump}")
+                return False
+            
+            log.info(f"Updated pump {self.selected_pump} target rate to: {value}")
+            return True
+        except Exception as e:
+            log.error(f"Error updating target rate for pump {self.selected_pump}: {e}")
+            return False
+    
+    def updateSelectedPumpState(self, state: str):
+        """Update the state of the currently selected pump.
+        
+        Args:
+            state: Either "pumping" or "standby"
+        """
+        try:
+            # Validate state
+            if state not in ["pumping", "standby"]:
+                log.error(f"Invalid pump state: {state}. Must be 'pumping' or 'standby'")
+                return False
+            
+            if self.selected_pump == 1:
+                self.update_pump_data(pump_state=state)
+            elif self.selected_pump == 2:
+                self.update_pump2_data(pump_state=state)
+            else:
+                log.error(f"Invalid selected pump: {self.selected_pump}")
+                return False
+            
+            log.info(f"Updated pump {self.selected_pump} state to: {state}")
+            return True
+        except Exception as e:
+            log.error(f"Error updating state for pump {self.selected_pump}: {e}")
+            return False

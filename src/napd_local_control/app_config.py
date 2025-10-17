@@ -5,11 +5,13 @@ from pydoover import config
 
 class NapdLocalControlConfig(config.Schema):
     def __init__(self):
-        self.pump_controllers = config.Array(
-            "Pump Controllers",
-            element=config.Application("Pump Controller", description="A pump controller application"),
-            description="List of pump controller applications"
-        )
+        
+        self.pump_1 = config.Application("Pump 1", description="The pump 1 application")
+        self.pump_2 = config.Application("Pump 2", description="The pump 2 application")
+        
+        self.selector_pin = config.Integer("Selector Pin", description="The selector pin")
+        self.start_pump_pin = config.Integer("Start Pump Pin", description="The start pump pin")
+        self.stop_pump_pin = config.Integer("Stop Pump Pin", description="The stop pump pin")
         
         self.solar_controllers = config.Array(
             "Solar Controllers", 
