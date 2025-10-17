@@ -29,21 +29,21 @@ class NapdLocalControlApplication(Application):
         
         ## create button and dial pulse counting subs
         
-        self.selector_button = self.plt_iface.get_new_pulse_counter(
+        self.selector_button = self.platform_iface.get_new_pulse_counter(
             di=self.config.selector_pin.value,
             edge="rising",
             callback=self.selector_button_callback,
             rate_window_secs=60,
         )
         
-        self.start_pump = self.plt_iface.get_new_pulse_counter(
+        self.start_pump = self.platform_iface.get_new_pulse_counter(
             di=self.config.start_pump_pin.value,
             edge="VI+10",
             callback=self.start_pump_callback,
             rate_window_secs=60,
         )
         
-        self.stop_pump = self.plt_iface.get_new_pulse_counter(
+        self.stop_pump = self.platform_iface.get_new_pulse_counter(
             di=self.config.stop_pump_pin.value,
             edge="falling",
             callback=self.stop_pump_callback,
