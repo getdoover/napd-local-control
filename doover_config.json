@@ -46,7 +46,7 @@
                     "x-name": "start_pump_pin",
                     "x-hidden": false,
                     "type": "integer",
-                    "description": "The start pump pin"
+                    "description": "The start pump (ai) pin"
                 },
                 "stop_pump_pin": {
                     "title": "Stop Pump Pin",
