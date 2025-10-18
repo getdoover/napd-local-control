@@ -62,6 +62,34 @@
                     "type": "integer",
                     "description": "The potentiometer (ai) pin"
                 },
+                "pump_1_start_led_pin": {
+                    "title": "Pump 1 Start LED Pin",
+                    "x-name": "pump_1_start_led_pin",
+                    "x-hidden": false,
+                    "type": "integer",
+                    "description": "The pump 1 start LED pin"
+                },
+                "pump_1_stop_led_pin": {
+                    "title": "Pump 1 Stop LED Pin",
+                    "x-name": "pump_1_stop_led_pin",
+                    "x-hidden": false,
+                    "type": "integer",
+                    "description": "The pump 1 stop LED pin"
+                },
+                "pump_2_start_led_pin": {
+                    "title": "Pump 2 Start LED Pin",
+                    "x-name": "pump_2_start_led_pin",
+                    "x-hidden": false,
+                    "type": "integer",
+                    "description": "The pump 2 start LED pin"
+                },
+                "pump_2_stop_led_pin": {
+                    "title": "Pump 2 Stop LED Pin",
+                    "x-name": "pump_2_stop_led_pin",
+                    "x-hidden": false,
+                    "type": "integer",
+                    "description": "The pump 2 stop LED pin"
+                },
                 "solar_controllers": {
                     "title": "Solar Controllers",
                     "x-name": "solar_controllers",
@@ -110,6 +138,10 @@
                 "start_pump_pin",
                 "stop_pump_pin",
                 "potentiometer_pin",
+                "pump_1_start_led_pin",
+                "pump_1_stop_led_pin",
+                "pump_2_start_led_pin",
+                "pump_2_stop_led_pin",
                 "solar_controllers",
                 "flow_sensor_app",
                 "pressure_sensor_app",
