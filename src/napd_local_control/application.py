@@ -104,14 +104,14 @@ class NapdLocalControlApplication(Application):
         
     async def start_pump_callback(self, di, di_value, dt_secs, counter, edge):
         # self.dashboard_interface.start_pump()
-        self.dashboard_interface.updateSelectedPumpState("pumping")
+        # self.dashboard_interface.updateSelectedPumpState("pumping")
         pump_number = self.dashboard_interface.getSelectedPump()
         log.info(f"Starting Pump {pump_number}")
         self.update_pump_state_tag(pump_number, 2)
         
     async def stop_pump_callback(self, di, di_value, dt_secs, counter, edge):
         # self.dashboard_interface.stop_pump()
-        self.dashboard_interface.updateSelectedPumpState("standby")
+        # self.dashboard_interface.updateSelectedPumpState("standby")
         pump_number = self.dashboard_interface.getSelectedPump()
         log.info(f"Stopping Pump {pump_number}")
         self.update_pump_state_tag(pump_number, 0)
@@ -119,9 +119,9 @@ class NapdLocalControlApplication(Application):
     async def update_pump_state_tag(self, pump_number, state):
         
         if pump_number == 1:
-            await self.set_tag("StateString", state, self.config.pump_1.value)
+            await self.set_tag("State", state, self.config.pump_1.value)
         elif pump_number == 2:
-            await self.set_tag("StateString", state, self.config.pump_2.value)
+            await self.set_tag("State", state, self.config.pump_2.value)
         
 
     async def update_dashboard_data(self):
