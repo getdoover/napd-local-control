@@ -38,14 +38,14 @@ class NapdLocalControlApplication(Application):
         
         self.start_pump = self.platform_iface.get_new_pulse_counter(
             di=self.config.start_pump_pin.value,
-            edge="VI+10",
+            edge="VI-18",
             callback=self.start_pump_callback,
             rate_window_secs=60,
         )
         
         self.stop_pump = self.platform_iface.get_new_pulse_counter(
             di=self.config.stop_pump_pin.value,
-            edge="falling",
+            edge="rising",
             callback=self.stop_pump_callback,
             rate_window_secs=60,
         )
