@@ -50,6 +50,7 @@ class NapdLocalControlApplication(Application):
             rate_window_secs=60,
         )
         
+                
         self.last_ai_input = await self.platform_iface.get_ai(self.config.potentiometer_pin.value)
         
         log.info("Dashboard started on port 8092")
@@ -61,7 +62,28 @@ class NapdLocalControlApplication(Application):
         # Update dashboard with example data
         await self.update_target_rate()
         await self.update_dashboard_data()
+        await self.update_pump_leds()
         
+    async def update_pump_leds(self):
+        p1_state =self.get_tag("StateString", self.config.pump_1.value)
+        p2_state =self.get_tag("StateString", self.config.pump_2.value)
+        
+        p1_led_state = self.get_tag(f"DO{self.config.pump_1_start_LED_pin.value}", "platform")
+        p2_led_state = self.get_tag(f"DO{self.config.pump_2_start_LED_pin.value}", "platform")
+        
+        if p1_state == "pumping":
+            if not p1_led_state:
+                await self.platform_iface.set_di(self.config.pump_1_start_LED_pin.value, True)
+        elif p1_state == "standby":
+            if p1_led_state:
+                await self.platform_iface.set_di(self.config.pump_1_start_LED_pin.value, False)
+        if p2_state == "pumping":
+            if not p2_led_state:
+                await self.platform_iface.set_di(self.config.pump_2_start_LED_pin.value, True)
+        elif p2_state == "standby":
+            if p2_led_state:
+                await self.platform_iface.set_di(self.config.pump_2_start_LED_pin.value, False)
+                
     async def update_target_rate(self):
         pump_number = self.dashboard_interface.getSelectedPump()
         ai_input = await self.platform_iface.get_ai(self.config.potentiometer_pin.value)
