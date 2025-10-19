@@ -73,16 +73,16 @@ class NapdLocalControlApplication(Application):
         
         if p1_state == "pumping":
             if not p1_led_state:
-                await self.platform_iface.set_di(self.config.pump_1_start_LED_pin.value, True)
+                await self.platform_iface.set_do(self.config.pump_1_start_LED_pin.value, True)
         elif p1_state == "standby":
             if p1_led_state:
-                await self.platform_iface.set_di(self.config.pump_1_start_LED_pin.value, False)
+                await self.platform_iface.set_do(self.config.pump_1_start_LED_pin.value, False)
         if p2_state == "pumping":
             if not p2_led_state:
-                await self.platform_iface.set_di(self.config.pump_2_start_LED_pin.value, True)
+                await self.platform_iface.set_do(self.config.pump_2_start_LED_pin.value, True)
         elif p2_state == "standby":
             if p2_led_state:
-                await self.platform_iface.set_di(self.config.pump_2_start_LED_pin.value, False)
+                await self.platform_iface.set_do(self.config.pump_2_start_LED_pin.value, False)
                 
     async def update_target_rate(self):
         pump_number = self.dashboard_interface.getSelectedPump()
@@ -91,6 +91,8 @@ class NapdLocalControlApplication(Application):
             return
         
         sys_voltage = self.get_tag("voltage", "platform")
+        if not sys_voltage:
+            sys_voltage = 25.0
         target_rate = round(ai_input / sys_voltage * 100, 2)
         
         if pump_number == 1:
@@ -107,14 +109,14 @@ class NapdLocalControlApplication(Application):
         # self.dashboard_interface.updateSelectedPumpState("pumping")
         pump_number = self.dashboard_interface.getSelectedPump()
         log.info(f"Starting Pump {pump_number}")
-        self.update_pump_state_tag(pump_number, 2)
+        await self.update_pump_state_tag(pump_number, 2)
         
     async def stop_pump_callback(self, di, di_value, dt_secs, counter, edge):
         # self.dashboard_interface.stop_pump()
         # self.dashboard_interface.updateSelectedPumpState("standby")
         pump_number = self.dashboard_interface.getSelectedPump()
         log.info(f"Stopping Pump {pump_number}")
-        self.update_pump_state_tag(pump_number, 0)
+        await self.update_pump_state_tag(pump_number, 0)
         
     async def update_pump_state_tag(self, pump_number, state):
         
