@@ -7,16 +7,19 @@ class Dashboard {
     constructor() {
         this.socket = null;
         this.isConnected = false;
-        this.reconnectAttempts = 0;
-        this.maxReconnectAttempts = 10;
-        this.reconnectDelay = 2000;
+        this.reconnectDelay = 4000;
         this.data = {};
         this.selectedPump = 1; // Default to pump 1
+        
+        // Connection timeout settings
+        this.connectionTimeout = 5 * 60 * 1000; // 5 minutes in milliseconds
+        this.connectionTimeoutId = null;
         
         this.initializeElements();
         this.initializeSocket();
         this.setupEventListeners();
         this.updatePumpSelection();
+        this.startConnectionTimeout();
     }
     
     initializeElements() {
@@ -77,9 +80,9 @@ class Dashboard {
         this.socket.on('connect', () => {
             console.log('Connected to dashboard server');
             this.isConnected = true;
-            this.reconnectAttempts = 0;
             this.updateConnectionStatus(true);
             this.hideLoadingOverlay();
+            this.clearConnectionTimeout(); // Clear the timeout since we're connected
         });
         
         this.socket.on('disconnect', () => {
@@ -347,19 +350,12 @@ class Dashboard {
     }
     
     attemptReconnect() {
-        if (this.reconnectAttempts < this.maxReconnectAttempts) {
-            this.reconnectAttempts++;
-            console.log(`Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
-            
-            setTimeout(() => {
-                if (!this.isConnected) {
-                    this.socket.connect();
-                }
-            }, this.reconnectDelay * this.reconnectAttempts);
-        } else {
-            console.error('Max reconnection attempts reached');
-            this.showConnectionError();
-        }
+        console.log(`Attempting to reconnect...`);
+        setTimeout(() => {
+            if (!this.isConnected) {
+                this.socket.connect();
+            }
+        }, this.reconnectDelay);
     }
     
     hideLoadingOverlay() {
@@ -370,6 +366,27 @@ class Dashboard {
     
     showLoadingOverlay() {
         this.loadingOverlay.classList.remove('hidden');
+    }
+    
+    startConnectionTimeout() {
+        console.log('Starting 5-minute connection timeout...');
+        this.connectionTimeoutId = setTimeout(() => {
+            if (!this.isConnected) {
+                console.warn('Connection timeout reached (5 minutes). Reloading page...');
+                this.showError('Connection timeout. Reloading page...');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000); // Give user 2 seconds to see the message
+            }
+        }, this.connectionTimeout);
+    }
+    
+    clearConnectionTimeout() {
+        if (this.connectionTimeoutId) {
+            clearTimeout(this.connectionTimeoutId);
+            this.connectionTimeoutId = null;
+            console.log('Connection timeout cleared');
+        }
     }
     
     showConnectionError() {
