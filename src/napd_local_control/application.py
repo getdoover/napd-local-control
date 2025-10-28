@@ -103,7 +103,7 @@ class NapdLocalControlApplication(Application):
         self.last_ai_input = ai_input
         
     @apply_async_kalman_filter(process_variance=.01)
-    async def get_pot_reading(self):
+    async def get_pot_reading(self, kf_measurement_variance=5):
         ai_input = await self.platform_iface.get_ai(self.config.potentiometer_pin.value)
         return ai_input
     async def selector_button_callback(self, di, di_value, dt_secs, counter, edge):
