@@ -3,6 +3,7 @@ import time
 
 from pydoover.docker import Application
 from pydoover import ui
+from pydoover.utils.kalman import apply_async_kalman_filter
 
 from .app_config import NapdLocalControlConfig
 from .dashboard import NAPDDashboard, DashboardInterface
@@ -86,8 +87,8 @@ class NapdLocalControlApplication(Application):
                 
     async def update_target_rate(self):
         pump_number = self.dashboard_interface.getSelectedPump()
-        ai_input = await self.platform_iface.get_ai(self.config.potentiometer_pin.value)
-        if ai_input < self.last_ai_input * 1.01 and ai_input > self.last_ai_input * 0.99:
+        ai_input = await self.get_pot_reading(kf_measurement_variance=5)
+        if ai_input is not None and self.last_ai_input * 0.99 < ai_input < self.last_ai_input * 1.01:
             return
         
         sys_voltage = self.get_tag("voltage", "platform")
@@ -101,6 +102,10 @@ class NapdLocalControlApplication(Application):
             await self.set_tag("TargetRatePercentage", target_rate, self.config.pump_2.value)
         self.last_ai_input = ai_input
         
+    @apply_async_kalman_filter(process_variance=.01)
+    async def get_pot_reading(self):
+        ai_input = await self.platform_iface.get_ai(self.config.potentiometer_pin.value)
+        return ai_input
     async def selector_button_callback(self, di, di_value, dt_secs, counter, edge):
         self.dashboard_interface.toggleSelectedPump()
         
@@ -163,7 +168,7 @@ class NapdLocalControlApplication(Application):
         if self.config.solar_controllers:
             battery_voltages = []
             battery_percentages = []
-            panel_power_values = []
+            panel_voltage_values = []
             battery_ah_values = []
             
             # Collect data from all solar controllers
@@ -171,47 +176,51 @@ class NapdLocalControlApplication(Application):
                 r = self.get_tag("b_voltage", solar_controller.value)
                 if r is not None:
                     battery_voltages.append(r)
+                    
                 r = self.get_tag("b_percent", solar_controller.value)
                 if r is not None:
                     battery_percentages.append(r)
-                r = self.get_tag("panel_power", solar_controller.value)
+                r = self.get_tag("panel_voltage", solar_controller.value)
+                
                 if r is not None:
-                    panel_power_values.append(r)
+                    panel_voltage_values.append(r)
                 r = self.get_tag("remaining_ah", solar_controller.value)
                 if r is not None:
                     battery_ah_values.append(r)
             
             # Aggregate data: average voltages/percentages, sum battery_ah
-            if len(battery_voltages) > 0:
+            if battery_voltages:
                 battery_voltage = sum(battery_voltages) / len(battery_voltages)
             else:
                 battery_voltage = 0.0
-            if len(battery_percentages) > 0:
+            if battery_percentages:
                 battery_percentage = sum(battery_percentages) / len(battery_percentages)
             else:
                 battery_percentage = 0.0
-            if len(panel_power_values) > 0:
-                panel_power = sum(panel_power_values) / len(panel_power_values)
+            if panel_voltage_values:
+                panel_voltage = sum(panel_voltage_values) / len(panel_voltage_values)
+                if panel_voltage < 0:
+                    panel_voltage = 0.0
             else:
-                panel_power = 0.0
+                panel_voltage = 0.0
             
-            if len(battery_ah_values) > 0:
+            if battery_ah_values:
                 battery_ah = sum(battery_ah_values) 
             else:
                 battery_ah = 0.0
             
-        else:
-            # Fallback values if no solar controllers configured
-            battery_voltage = 24.5
-            battery_percentage = 78.0
-            panel_power = 150.0
-            battery_ah = 120.0
+        # else:
+        #     # Fallback values if no solar controllers configured
+        #     battery_voltage = 24.5
+        #     battery_percentage = 78.0
+        #     panel_power = 150.0
+        #     battery_ah = 120.0
         
         # Update solar data
         self.dashboard_interface.update_solar_data(
             battery_voltage=battery_voltage,
             battery_percentage=battery_percentage,
-            array_voltage=panel_power,
+            array_voltage=panel_voltage,
             battery_ah=battery_ah
         )
         
