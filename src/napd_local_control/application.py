@@ -87,7 +87,8 @@ class NapdLocalControlApplication(Application):
                 
     async def update_target_rate(self):
         pump_number = self.dashboard_interface.getSelectedPump()
-        ai_input = await self.get_pot_reading(kf_measurement_variance=5)
+        ai_input = await self.get_pot_reading(kf_measurement_variance=0.0005)
+        log.debug(f"AI Input: {ai_input}")
         if ai_input is not None and self.last_ai_input * 0.99 < ai_input < self.last_ai_input * 1.01:
             return
         
@@ -103,8 +104,9 @@ class NapdLocalControlApplication(Application):
         self.last_ai_input = ai_input
         
     @apply_async_kalman_filter(process_variance=.01)
-    async def get_pot_reading(self, kf_measurement_variance=5):
+    async def get_pot_reading(self, kf_measurement_variance=1):
         ai_input = await self.platform_iface.get_ai(self.config.potentiometer_pin.value)
+        log.debug(f"Raw AI Input: {ai_input}")
         return ai_input
     async def selector_button_callback(self, di, di_value, dt_secs, counter, edge):
         self.dashboard_interface.toggleSelectedPump()
