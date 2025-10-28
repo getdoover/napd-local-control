@@ -177,18 +177,18 @@ class NapdLocalControlApplication(Application):
             for solar_controller in self.config.solar_controllers.elements:
                 r = self.get_tag("b_voltage", solar_controller.value)
                 if r is not None:
-                    battery_voltages.append(r)
+                    battery_voltages.append(float(r))
                     
                 r = self.get_tag("b_percent", solar_controller.value)
                 if r is not None:
-                    battery_percentages.append(r)
+                    battery_percentages.append(float(r))
                 r = self.get_tag("panel_voltage", solar_controller.value)
                 
                 if r is not None:
-                    panel_voltage_values.append(r)
+                    panel_voltage_values.append(float(r))
                 r = self.get_tag("remaining_ah", solar_controller.value)
                 if r is not None:
-                    battery_ah_values.append(r)
+                    battery_ah_values.append(float(r))
             
             # Aggregate data: average voltages/percentages, sum battery_ah
             if battery_voltages:
