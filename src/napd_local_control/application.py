@@ -21,6 +21,9 @@ class NapdLocalControlApplication(Application):
         # Initialize dashboard
         self.dashboard = NAPDDashboard(host="0.0.0.0", port=8092, debug=False)
         self.dashboard_interface = DashboardInterface(self.dashboard)
+        
+        #for catching the first event that is triggered when pulse counter starts
+        self.start_first_callback = False
 
     async def setup(self):
         self.loop_target_period = 0.2
@@ -112,6 +115,9 @@ class NapdLocalControlApplication(Application):
         self.dashboard_interface.toggleSelectedPump()
         
     async def start_pump_callback(self, di, di_value, dt_secs, counter, edge):
+        if not self.start_first_callback:
+            self.start_first_callback = True
+            return
         # self.dashboard_interface.start_pump()
         # self.dashboard_interface.updateSelectedPumpState("pumping")
         pump_number = self.dashboard_interface.getSelectedPump()
