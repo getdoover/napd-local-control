@@ -1,7 +1,10 @@
 from pathlib import Path
-
+import enum
 from pydoover import config
 
+class EdgeChoice(enum.Enum):
+    RISING = "rising"
+    FALLING = "falling"
 
 class NapdLocalControlConfig(config.Schema):
     def __init__(self):
@@ -11,6 +14,12 @@ class NapdLocalControlConfig(config.Schema):
         
         self.selector_pin = config.Integer("Selector Pin", description="The selector pin")
         self.start_pump_pin = config.Integer("Start Pump Pin", description="The start pump (ai) pin")
+        self.start_pump_edge = config.Enum(
+            "Start Pump Edge", 
+            description="The start pump edge",
+            choices=EdgeChoice,
+            default=EdgeChoice.FALLING
+        )
         self.stop_pump_pin = config.Integer("Stop Pump Pin", description="The stop pump pin")
         
         self.potentiometer_pin = config.Integer("Potentiometer Pin", description="The potentiometer (ai) pin")
@@ -33,6 +42,10 @@ class NapdLocalControlConfig(config.Schema):
             
         self.tank_level_app = config.Application("Tank Level App", description="The tank level application")
 
+    @property
+    def start_pump_edge_rising(self):
+        return self.start_pump_edge.value == EdgeChoice.RISING
+        
 def export():
     NapdLocalControlConfig().export(Path(__file__).parents[2] / "doover_config.json", "napd_local_control")
 

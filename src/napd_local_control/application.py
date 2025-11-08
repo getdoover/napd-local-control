@@ -5,7 +5,7 @@ from pydoover.docker import Application
 from pydoover import ui
 from pydoover.utils.kalman import apply_async_kalman_filter
 
-from .app_config import NapdLocalControlConfig
+from .app_config import NapdLocalControlConfig, EdgeChoice
 from .dashboard import NAPDDashboard, DashboardInterface
 
 log = logging.getLogger()
@@ -43,9 +43,10 @@ class NapdLocalControlApplication(Application):
             rate_window_secs=60,
         )
         
+        edge = "VI+18" if self.config.start_pump_edge_rising else "VI-18"
         self.start_pump = self.platform_iface.get_new_pulse_counter(
             di=self.config.start_pump_pin.value,
-            edge="VI-18",
+            edge=edge,
             callback=self.start_pump_callback,
             rate_window_secs=60,
         )
