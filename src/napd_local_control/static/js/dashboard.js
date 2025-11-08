@@ -300,7 +300,7 @@ class Dashboard {
             messages.push('High High Pressure Tripped the Pumps!');
         }
         if (faultData.ll_tank_level) {
-            messages.push('Low Low Pressure Tripped the Pumps!');
+            messages.push('Low Low Tank Level Tripped the Pumps! - Fill Tank');
         }
         
         this.faultMessageList.innerHTML = '';

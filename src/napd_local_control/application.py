@@ -96,13 +96,15 @@ class NapdLocalControlApplication(Application):
         p2_fault_led_state = self.get_tag(f"AO{self.config.pump_2_fault_LED_pin.value}", "platform")
         
         # Update fault LED
-        if self.hh_pressure_active or self.ll_tank_level_active:
-            if p1_fault_led_state < 0 or p2_fault_led_state < 0:
-                await self.platform_iface.set_ao(self.config.pump_1_fault_LED_pin.value, 100)
-                await self.platform_iface.set_ao(self.config.pump_2_fault_LED_pin.value, 100)
-        elif p1_fault_led_state > 0 or p2_fault_led_state > 0:
-            await self.platform_iface.set_ao(self.config.pump_1_fault_LED_pin.value, 0)
-            await self.platform_iface.set_ao(self.config.pump_2_fault_LED_pin.value, 0)
+        if p1_fault_led_state is not None and p2_fault_led_state is not None:
+            if (self.hh_pressure_active or self.ll_tank_level_active):
+                if float(p1_fault_led_state) < 0.1 or float(p2_fault_led_state) < 0.1:
+                    print("setting fault leds to 100")
+                    await self.platform_iface.set_ao(self.config.pump_1_fault_LED_pin.value, 100)
+                    await self.platform_iface.set_ao(self.config.pump_2_fault_LED_pin.value, 100)
+            elif p1_fault_led_state > 0 or p2_fault_led_state > 0:
+                await self.platform_iface.set_ao(self.config.pump_1_fault_LED_pin.value, 0)
+                await self.platform_iface.set_ao(self.config.pump_2_fault_LED_pin.value, 0)
         
         if p1_state_string  == "pumping":
             if not p1_led_state:
