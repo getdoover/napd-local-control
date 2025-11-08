@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import math
 import threading
 import time
 from datetime import datetime
@@ -99,56 +100,93 @@ class DashboardData:
             return value.strip().lower() in {"true", "1", "yes", "on"}
         return default
     
-    def update_from_dict(self, data: Dict[str, Any]):
-        """Update from dictionary with validation."""
+    def _update_numeric(self, attr: str, value: Any, tolerance: float = 0.0) -> bool:
+        """Update a numeric attribute if it changes beyond tolerance."""
+        if value is None:
+            return False
+        try:
+            new_value = float(value)
+        except (TypeError, ValueError):
+            return False
+        
+        current_value = getattr(self, attr)
+        if isinstance(current_value, (int, float)) and isinstance(new_value, (int, float)):
+            if math.isfinite(current_value) and math.isfinite(new_value):
+                if abs(current_value - new_value) <= tolerance:
+                    return False
+            elif current_value == new_value:
+                return False
+        elif current_value == new_value:
+            return False
+        
+        setattr(self, attr, new_value)
+        return True
+    
+    def _update_string(self, attr: str, value: Any) -> bool:
+        """Update a string attribute if the value changed."""
+        if value is None:
+            return False
+        new_value = str(value)
+        current_value = getattr(self, attr)
+        if current_value == new_value:
+            return False
+        setattr(self, attr, new_value)
+        return True
+    
+    def update_from_dict(self, data: Dict[str, Any]) -> bool:
+        """Update from dictionary with validation. Returns True if data changed."""
+        changed = False
+        
         if "pump" in data:
             pump = data["pump"]
-            self.target_rate = float(pump.get("target_rate", self.target_rate))
-            self.flow_rate = float(pump.get("flow_rate", self.flow_rate))
-            self.pump_state = str(pump.get("pump_state", self.pump_state))
+            changed |= self._update_numeric("target_rate", pump.get("target_rate"), tolerance=0.05)
+            changed |= self._update_numeric("flow_rate", pump.get("flow_rate"), tolerance=0.05)
+            changed |= self._update_string("pump_state", pump.get("pump_state", self.pump_state))
         
         if "pump2" in data:
             pump2 = data["pump2"]
-            self.pump2_target_rate = float(pump2.get("target_rate", self.pump2_target_rate))
-            self.pump2_flow_rate = float(pump2.get("flow_rate", self.pump2_flow_rate))
-            self.pump2_pump_state = str(pump2.get("pump_state", self.pump2_pump_state))
+            changed |= self._update_numeric("pump2_target_rate", pump2.get("target_rate"), tolerance=0.05)
+            changed |= self._update_numeric("pump2_flow_rate", pump2.get("flow_rate"), tolerance=0.05)
+            changed |= self._update_string("pump2_pump_state", pump2.get("pump_state", self.pump2_pump_state))
         
         if "solar" in data:
             solar = data["solar"]
-            self.battery_voltage = float(solar.get("battery_voltage", self.battery_voltage))
-            self.battery_percentage = float(solar.get("battery_percentage", self.battery_percentage))
-            self.panel_power = float(solar.get("panel_power", self.panel_power))
-            self.battery_ah = float(solar.get("battery_ah", self.battery_ah))
+            changed |= self._update_numeric("battery_voltage", solar.get("battery_voltage"), tolerance=0.05)
+            changed |= self._update_numeric("battery_percentage", solar.get("battery_percentage"), tolerance=0.2)
+            changed |= self._update_numeric("panel_power", solar.get("panel_power"), tolerance=0.05)
+            changed |= self._update_numeric("battery_ah", solar.get("battery_ah"), tolerance=0.1)
         
         if "tank" in data:
             tank = data["tank"]
-            self.tank_level_mm = float(tank.get("tank_level_mm", self.tank_level_mm))
-            self.tank_level_percent = float(tank.get("tank_level_percent", self.tank_level_percent))
+            changed |= self._update_numeric("tank_level_mm", tank.get("tank_level_mm"), tolerance=1.0)
+            changed |= self._update_numeric("tank_level_percent", tank.get("tank_level_percent"), tolerance=0.5)
         
         if "skid" in data:
             skid = data["skid"]
-            self.skid_flow = float(skid.get("skid_flow", self.skid_flow))
-            self.skid_pressure = float(skid.get("skid_pressure", self.skid_pressure))
+            changed |= self._update_numeric("skid_flow", skid.get("skid_flow"), tolerance=0.1)
+            changed |= self._update_numeric("skid_pressure", skid.get("skid_pressure"), tolerance=0.1)
         
         if "system" in data:
             system = data["system"]
-            self.system_status = str(system.get("status", self.system_status))
+            changed |= self._update_string("system_status", system.get("status", self.system_status))
         
         if "faults" in data:
             faults = data["faults"]
             if isinstance(faults, dict):
                 if "hh_pressure" in faults:
-                    self.faults["hh_pressure"] = self._to_bool(
-                        faults.get("hh_pressure"),
-                        self.faults["hh_pressure"]
-                    )
+                    new_value = self._to_bool(faults.get("hh_pressure"), self.faults["hh_pressure"])
+                    if self.faults["hh_pressure"] != new_value:
+                        self.faults["hh_pressure"] = new_value
+                        changed = True
                 if "ll_tank_level" in faults:
-                    self.faults["ll_tank_level"] = self._to_bool(
-                        faults.get("ll_tank_level"),
-                        self.faults["ll_tank_level"]
-                    )
+                    new_value = self._to_bool(faults.get("ll_tank_level"), self.faults["ll_tank_level"])
+                    if self.faults["ll_tank_level"] != new_value:
+                        self.faults["ll_tank_level"] = new_value
+                        changed = True
         
-        self.timestamp = datetime.now()
+        if changed:
+            self.timestamp = datetime.now()
+        return changed
 
 
 class NAPDDashboard:
@@ -278,9 +316,9 @@ class NAPDDashboard:
         try:
             # Update data container
             if kwargs:
-                self.data.update_from_dict(kwargs)
-                self.broadcast_update()
-                log.debug(f"Dashboard data updated: {kwargs}")
+                if self.data.update_from_dict(kwargs):
+                    self.broadcast_update()
+                    log.debug(f"Dashboard data updated: {kwargs}")
         except Exception as e:
             log.error(f"Error updating dashboard data: {e}")
     
