@@ -24,6 +24,9 @@ class NapdLocalControlApplication(Application):
         
         #for catching the first event that is triggered when pulse counter starts
         self.start_first_callback = False
+        
+        self.hh_pressure_active = False
+        self.ll_tank_level_active = False
 
     async def setup(self):
         self.loop_target_period = 0.2
@@ -64,30 +67,58 @@ class NapdLocalControlApplication(Application):
         # self.get_tag("tank_level", self.config.tank_level_app.value)
         # a random value we set inside our simulator. Go check it out in simulators/sample!
         # Update dashboard with example data
+        await self.check_faults()
         await self.update_target_rate()
         await self.update_dashboard_data()
         await self.update_pump_leds()
         
+    async def check_faults(self):
+        p1_app_state =self.get_tag("AppState", self.config.pump_1.value)
+        p2_app_state =self.get_tag("AppState", self.config.pump_2.value)
+        
+        if "pressure_high_high_level" in (p1_app_state, p2_app_state):
+            self.hh_pressure_active = True
+        elif "tank_level_low_low_level" in (p1_app_state, p2_app_state):
+            self.ll_tank_level_active = True
+        
+        self.dashboard_interface.set_faults(
+            hh_pressure=self.hh_pressure_active,
+            ll_tank_level=self.ll_tank_level_active
+        )
+        
     async def update_pump_leds(self):
-        p1_state =self.get_tag("StateString", self.config.pump_1.value)
-        p2_state =self.get_tag("StateString", self.config.pump_2.value)
+        p1_state_string =self.get_tag("StateString", self.config.pump_1.value)
+        p2_state_string =self.get_tag("StateString", self.config.pump_2.value)
         
         p1_led_state = self.get_tag(f"DO{self.config.pump_1_start_LED_pin.value}", "platform")
         p2_led_state = self.get_tag(f"DO{self.config.pump_2_start_LED_pin.value}", "platform")
+        p1_fault_led_state = self.get_tag(f"AO{self.config.pump_1_fault_LED_pin.value}", "platform")
+        p2_fault_led_state = self.get_tag(f"AO{self.config.pump_2_fault_LED_pin.value}", "platform")
         
-        if p1_state == "pumping":
+        # Update fault LED
+        if self.hh_pressure_active or self.ll_tank_level_active:
+            if p1_fault_led_state < 0 or p2_fault_led_state < 0:
+                await self.platform_iface.set_ao(self.config.pump_1_fault_LED_pin.value, 100)
+                await self.platform_iface.set_ao(self.config.pump_2_fault_LED_pin.value, 100)
+        elif p1_fault_led_state > 0 or p2_fault_led_state > 0:
+            await self.platform_iface.set_ao(self.config.pump_1_fault_LED_pin.value, 0)
+            await self.platform_iface.set_ao(self.config.pump_2_fault_LED_pin.value, 0)
+        
+        if p1_state_string  == "pumping":
             if not p1_led_state:
                 await self.platform_iface.set_do(self.config.pump_1_start_LED_pin.value, True)
-        elif p1_state == "standby":
+        elif p1_state_string == "standby":
             if p1_led_state:
                 await self.platform_iface.set_do(self.config.pump_1_start_LED_pin.value, False)
-        if p2_state == "pumping":
+                
+        if p2_state_string == "pumping":
             if not p2_led_state:
                 await self.platform_iface.set_do(self.config.pump_2_start_LED_pin.value, True)
-        elif p2_state == "standby":
+        elif p2_state_string == "standby":
             if p2_led_state:
                 await self.platform_iface.set_do(self.config.pump_2_start_LED_pin.value, False)
-                
+        elif p2_state_string == "fault":
+            pass
     async def update_target_rate(self):
         pump_number = self.dashboard_interface.getSelectedPump()
         ai_input = await self.get_pot_reading(kf_measurement_variance=0.0005)
@@ -111,7 +142,13 @@ class NapdLocalControlApplication(Application):
         ai_input = await self.platform_iface.get_ai(self.config.potentiometer_pin.value)
         log.debug(f"Raw AI Input: {ai_input}")
         return ai_input
+    
     async def selector_button_callback(self, di, di_value, dt_secs, counter, edge):
+        if self.hh_pressure_active or self.ll_tank_level_active:
+            self.hh_pressure_active = False
+            self.ll_tank_level_active = False
+            self.dashboard_interface.clear_faults()
+            return
         self.dashboard_interface.toggleSelectedPump()
         
     async def start_pump_callback(self, di, di_value, dt_secs, counter, edge):

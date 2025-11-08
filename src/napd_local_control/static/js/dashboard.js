@@ -63,6 +63,11 @@ class Dashboard {
         // Pump control elements
         this.pumpControl1 = document.getElementById('pump-control-1');
         this.pumpControl2 = document.getElementById('pump-control-2');
+        
+        // Fault popover
+        this.faultPopover = document.getElementById('fault-popover');
+        this.faultMessageList = document.getElementById('fault-message-list');
+        this.faultInstructions = document.querySelector('.fault-popover-instructions');
     }
     
     initializeSocket() {
@@ -185,6 +190,13 @@ class Dashboard {
         if (data.system) {
             this.updateSystemData(data.system);
         }
+        
+        // Update faults
+        if (data.faults) {
+            this.updateFaults(data.faults);
+        } else {
+            this.updateFaults({});
+        }
     }
     
     updatePumpData(pumpData) {
@@ -275,6 +287,38 @@ class Dashboard {
         // Update system status
         if (systemData.status !== undefined) {
             this.updateSystemStatus(systemData.status);
+        }
+    }
+    
+    updateFaults(faultData = {}) {
+        if (!this.faultPopover || !this.faultMessageList) {
+            return;
+        }
+        
+        const messages = [];
+        if (faultData.hh_pressure) {
+            messages.push('High High Pressure Tripped the Pumps!');
+        }
+        if (faultData.ll_tank_level) {
+            messages.push('Low Low Pressure Tripped the Pumps!');
+        }
+        
+        this.faultMessageList.innerHTML = '';
+        
+        if (messages.length > 0) {
+            messages.forEach(message => {
+                const item = document.createElement('li');
+                item.textContent = message;
+                this.faultMessageList.appendChild(item);
+            });
+            
+            if (this.faultInstructions) {
+                this.faultInstructions.textContent = 'Press the selector button to clear the faults.';
+            }
+            
+            this.faultPopover.classList.remove('hidden');
+        } else {
+            this.faultPopover.classList.add('hidden');
         }
     }
     

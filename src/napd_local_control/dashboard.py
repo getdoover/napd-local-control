@@ -44,6 +44,12 @@ class DashboardData:
         # System Data
         self.timestamp: datetime = datetime.now()
         self.system_status: str = "running"
+        
+        # Fault Data
+        self.faults = {
+            "hh_pressure": False,
+            "ll_tank_level": False
+        }
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
@@ -75,8 +81,23 @@ class DashboardData:
             "system": {
                 "timestamp": self.timestamp.isoformat(),
                 "status": self.system_status
+            },
+            "faults": {
+                "hh_pressure": self.faults["hh_pressure"],
+                "ll_tank_level": self.faults["ll_tank_level"]
             }
         }
+    
+    @staticmethod
+    def _to_bool(value: Any, default: bool = False) -> bool:
+        """Convert a value to boolean with fallback."""
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            return value != 0
+        if isinstance(value, str):
+            return value.strip().lower() in {"true", "1", "yes", "on"}
+        return default
     
     def update_from_dict(self, data: Dict[str, Any]):
         """Update from dictionary with validation."""
@@ -112,6 +133,20 @@ class DashboardData:
         if "system" in data:
             system = data["system"]
             self.system_status = str(system.get("status", self.system_status))
+        
+        if "faults" in data:
+            faults = data["faults"]
+            if isinstance(faults, dict):
+                if "hh_pressure" in faults:
+                    self.faults["hh_pressure"] = self._to_bool(
+                        faults.get("hh_pressure"),
+                        self.faults["hh_pressure"]
+                    )
+                if "ll_tank_level" in faults:
+                    self.faults["ll_tank_level"] = self._to_bool(
+                        faults.get("ll_tank_level"),
+                        self.faults["ll_tank_level"]
+                    )
         
         self.timestamp = datetime.now()
 
@@ -327,6 +362,14 @@ class DashboardInterface:
         if self._server_thread and self._server_thread.is_alive():
             self._server_thread.join(timeout=5)
         log.info("Dashboard stopped")
+        
+    def set_faults(self, hh_pressure: bool = False, ll_tank_level: bool = False):
+        """Set faults."""
+        self.dashboard.update_data(faults={'hh_pressure': hh_pressure, 'll_tank_level': ll_tank_level})
+    
+    def clear_faults(self):
+        """Clear faults."""
+        self.set_faults(hh_pressure=False, ll_tank_level=False)
     
     def update_pump_data(self, target_rate: float = None, flow_rate: float = None, pump_state: str = None):
         """Update pump control data."""
