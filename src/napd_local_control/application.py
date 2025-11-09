@@ -110,7 +110,6 @@ class NapdLocalControlApplication(Application):
             self.dashboard_interface.update_pump2_data(pump_state="standby")
         await self.update_pump2_leds()
     async def state_change_cb(self, new_value: str, pump_number: int):
-        log.info(f"state has changed: {new_value}")
         pump_app = getattr(self.config, f"pump_{pump_number}").value
         if "pressure_high_high_level" == new_value:
             if not self.hh_pressure_active:
@@ -143,17 +142,14 @@ class NapdLocalControlApplication(Application):
         if fault_led_state is not None:
             if (self.hh_pressure_active or self.ll_tank_level_active):
                 if float(fault_led_state) < 0.1:
-                    print("setting fault leds to 100")
                     await self.platform_iface.set_ao(pump_fault_LED_pin, 100)
             elif fault_led_state > 0:
                 await self.platform_iface.set_ao(pump_fault_LED_pin, 0)
         
         if app_state  == "auto":
             if not pmp_led_state:
-                print("setting pump led to true")
                 await self.platform_iface.set_do(pump_LED_pin, True)
         elif pmp_led_state:
-            print("setting pump led to false")
             await self.platform_iface.set_do(pump_LED_pin, False)
         
     async def update_pump1_leds(self):
