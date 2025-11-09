@@ -127,9 +127,9 @@ class NapdLocalControlApplication(Application):
         )
         
     async def _update_pump_leds(self, pump_number: int):
-        print("updating LEDS")
-        print("self.ll_tank_level_active ",self.ll_tank_level_active)
-        print("self.hh_pressure_active ",self.hh_pressure_active)
+        # print("updating LEDS")
+        # print("self.ll_tank_level_active ",self.ll_tank_level_active)
+        # print("self.hh_pressure_active ",self.hh_pressure_active)
         pump_LED_pin = getattr(self.config, f"pump_{pump_number}_start_LED_pin").value
         pump_fault_LED_pin = getattr(self.config, f"pump_{pump_number}_fault_LED_pin").value
         pmp_led_state = self.get_tag(f"DO{pump_LED_pin}", "platform")
@@ -137,8 +137,8 @@ class NapdLocalControlApplication(Application):
         
         app_state = getattr(self, f"p{pump_number}_app_state")
         
-        print("pmp_led_state ",pmp_led_state)
-        print("fault_led_state ",fault_led_state)
+        # print("pmp_led_state ",pmp_led_state)
+        # print("fault_led_state ",fault_led_state)
         # Update fault LED
         if fault_led_state is not None:
             if (self.hh_pressure_active or self.ll_tank_level_active):
