@@ -1,5 +1,6 @@
 import logging
 import time
+import asyncio
 
 from pydoover.docker import Application
 from pydoover import ui
@@ -78,9 +79,15 @@ class NapdLocalControlApplication(Application):
         p2_app_state =self.get_tag("AppState", self.config.pump_2.value)
         
         if "pressure_high_high_level" in (p1_app_state, p2_app_state):
-            self.hh_pressure_active = True
+            if not self.hh_pressure_active:
+                self.hh_pressure_active = True
+                await self.set_tag("StateWrite", 0, self.config.pump_1.value)
+                await self.set_tag("StateWrite", 0, self.config.pump_2.value)
         elif "tank_level_low_low_level" in (p1_app_state, p2_app_state):
-            self.ll_tank_level_active = True
+            if not self.ll_tank_level_active:
+                self.ll_tank_level_active = True
+                await self.set_tag("StateWrite", 0, self.config.pump_1.value)
+                await self.set_tag("StateWrite", 0, self.config.pump_2.value)
         
         self.dashboard_interface.set_faults(
             hh_pressure=self.hh_pressure_active,
@@ -162,6 +169,8 @@ class NapdLocalControlApplication(Application):
         # self.dashboard_interface.updateSelectedPumpState("pumping")
         pump_number = self.dashboard_interface.getSelectedPump()
         log.info(f"Starting Pump {pump_number}")
+        # await self.update_pump_state_tag(pump_number, 0)
+        # await asyncio.sleep(0.5)
         await self.update_pump_state_tag(pump_number, 2)
         
     async def stop_pump_callback(self, di, di_value, dt_secs, counter, edge):
