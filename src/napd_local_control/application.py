@@ -59,76 +59,108 @@ class NapdLocalControlApplication(Application):
             rate_window_secs=60,
         )
         
+        while self.get_tag("AO0", "platform") is None:
+            await asyncio.sleep(0.2)
+        log.info("AO0 is ready")
+        
+        #init states
+        self.p1_app_state = self.get_tag("AppState", self.config.pump_1.value)
+        self.p2_app_state = self.get_tag("AppState", self.config.pump_2.value)
+        if self.p1_app_state is None:
+            self.p1_app_state = "off"
+        if self.p2_app_state is None:
+            self.p2_app_state = "off"
+        await self.pump_1_state_change_cb(None,self.p1_app_state)
+        await self.pump_2_state_change_cb(None,self.p2_app_state)
+        
+        # call_maybe_async(callback, tag_key, new_value
+        
+        # self.subscribe_to_tag("AppState",self.pump_1_state_change_cb,self.config.pump_1.value)
+        # self.subscribe_to_tag("AppState",self.pump_2_state_change_cb,self.config.pump_2.value)
+        
                 
         self.last_ai_input = await self.platform_iface.get_ai(self.config.potentiometer_pin.value)
         
         log.info("Dashboard started on port 8092")
 
+        
     async def main_loop(self):
         
         # self.get_tag("tank_level", self.config.tank_level_app.value)
         # a random value we set inside our simulator. Go check it out in simulators/sample!
         # Update dashboard with example data
-        await self.check_faults()
         await self.update_target_rate()
         await self.update_dashboard_data()
-        await self.update_pump_leds()
+        # await self.update_pump_leds()
         
-    async def check_faults(self):
-        p1_app_state =self.get_tag("AppState", self.config.pump_1.value)
-        p2_app_state =self.get_tag("AppState", self.config.pump_2.value)
+    async def pump_1_state_change_cb(self, app_key, new_value: str):
+        await self.state_change_cb(new_value,1)
+        if self.p1_app_state == "auto":
+            self.dashboard_interface.update_pump_data(pump_state="pumping")
+        else:
+            self.dashboard_interface.update_pump_data(pump_state="standby")
         
-        if "pressure_high_high_level" in (p1_app_state, p2_app_state):
+        await self.update_pump1_leds()
+        
+    async def pump_2_state_change_cb(self, app_key, new_value: str):
+        await self.state_change_cb(new_value, 2)
+        if self.p2_app_state == "auto":
+            self.dashboard_interface.update_pump2_data(pump_state="pumping")
+        else:
+            self.dashboard_interface.update_pump2_data(pump_state="standby")
+        await self.update_pump2_leds()
+    async def state_change_cb(self, new_value: str, pump_number: int):
+        log.info(f"state has changed: {new_value}")
+        pump_app = getattr(self.config, f"pump_{pump_number}").value
+        if "pressure_high_high_level" == new_value:
             if not self.hh_pressure_active:
                 self.hh_pressure_active = True
-                await self.set_tag("StateWrite", 0, self.config.pump_1.value)
-                await self.set_tag("StateWrite", 0, self.config.pump_2.value)
-        elif "tank_level_low_low_level" in (p1_app_state, p2_app_state):
+                await self.set_tag("StateWrite", 0, pump_app)
+        elif "tank_level_low_low_level" == new_value:
             if not self.ll_tank_level_active:
                 self.ll_tank_level_active = True
-                await self.set_tag("StateWrite", 0, self.config.pump_1.value)
-                await self.set_tag("StateWrite", 0, self.config.pump_2.value)
+                await self.set_tag("StateWrite", 0, pump_app)
         
         self.dashboard_interface.set_faults(
             hh_pressure=self.hh_pressure_active,
             ll_tank_level=self.ll_tank_level_active
         )
         
-    async def update_pump_leds(self):
-        p1_state_string =self.get_tag("StateString", self.config.pump_1.value)
-        p2_state_string =self.get_tag("StateString", self.config.pump_2.value)
+    async def _update_pump_leds(self, pump_number: int):
+        print("updating LEDS")
+        print("self.ll_tank_level_active ",self.ll_tank_level_active)
+        print("self.hh_pressure_active ",self.hh_pressure_active)
+        pump_LED_pin = getattr(self.config, f"pump_{pump_number}_start_LED_pin").value
+        pump_fault_LED_pin = getattr(self.config, f"pump_{pump_number}_fault_LED_pin").value
+        pmp_led_state = self.get_tag(f"DO{pump_LED_pin}", "platform")
+        fault_led_state = self.get_tag(f"AO{pump_fault_LED_pin}", "platform")
         
-        p1_led_state = self.get_tag(f"DO{self.config.pump_1_start_LED_pin.value}", "platform")
-        p2_led_state = self.get_tag(f"DO{self.config.pump_2_start_LED_pin.value}", "platform")
-        p1_fault_led_state = self.get_tag(f"AO{self.config.pump_1_fault_LED_pin.value}", "platform")
-        p2_fault_led_state = self.get_tag(f"AO{self.config.pump_2_fault_LED_pin.value}", "platform")
+        app_state = getattr(self, f"p{pump_number}_app_state")
         
+        print("pmp_led_state ",pmp_led_state)
+        print("fault_led_state ",fault_led_state)
         # Update fault LED
-        if p1_fault_led_state is not None and p2_fault_led_state is not None:
+        if fault_led_state is not None:
             if (self.hh_pressure_active or self.ll_tank_level_active):
-                if float(p1_fault_led_state) < 0.1 or float(p2_fault_led_state) < 0.1:
+                if float(fault_led_state) < 0.1:
                     print("setting fault leds to 100")
-                    await self.platform_iface.set_ao(self.config.pump_1_fault_LED_pin.value, 100)
-                    await self.platform_iface.set_ao(self.config.pump_2_fault_LED_pin.value, 100)
-            elif p1_fault_led_state > 0 or p2_fault_led_state > 0:
-                await self.platform_iface.set_ao(self.config.pump_1_fault_LED_pin.value, 0)
-                await self.platform_iface.set_ao(self.config.pump_2_fault_LED_pin.value, 0)
+                    await self.platform_iface.set_ao(pump_fault_LED_pin, 100)
+            elif fault_led_state > 0:
+                await self.platform_iface.set_ao(pump_fault_LED_pin, 0)
         
-        if p1_state_string  == "pumping":
-            if not p1_led_state:
-                await self.platform_iface.set_do(self.config.pump_1_start_LED_pin.value, True)
-        elif p1_state_string == "standby":
-            if p1_led_state:
-                await self.platform_iface.set_do(self.config.pump_1_start_LED_pin.value, False)
-                
-        if p2_state_string == "pumping":
-            if not p2_led_state:
-                await self.platform_iface.set_do(self.config.pump_2_start_LED_pin.value, True)
-        elif p2_state_string == "standby":
-            if p2_led_state:
-                await self.platform_iface.set_do(self.config.pump_2_start_LED_pin.value, False)
-        elif p2_state_string == "fault":
-            pass
+        if app_state  == "auto":
+            if not pmp_led_state:
+                print("setting pump led to true")
+                await self.platform_iface.set_do(pump_LED_pin, True)
+        elif pmp_led_state:
+            print("setting pump led to false")
+            await self.platform_iface.set_do(pump_LED_pin, False)
+        
+    async def update_pump1_leds(self):
+        await self._update_pump_leds(1)
+    async def update_pump2_leds(self):
+        await self._update_pump_leds(2)
+        
     async def update_target_rate(self):
         pump_number = self.dashboard_interface.getSelectedPump()
         ai_input = await self.get_pot_reading(kf_measurement_variance=0.0005)
@@ -158,19 +190,15 @@ class NapdLocalControlApplication(Application):
             self.hh_pressure_active = False
             self.ll_tank_level_active = False
             self.dashboard_interface.clear_faults()
+            await self.update_pump1_leds()
+            await self.update_pump2_leds()
             return
         self.dashboard_interface.toggleSelectedPump()
         
     async def start_pump_callback(self, di, di_value, dt_secs, counter, edge):
-        if not self.start_first_callback:
-            self.start_first_callback = True
-            return
-        # self.dashboard_interface.start_pump()
-        # self.dashboard_interface.updateSelectedPumpState("pumping")
+
         pump_number = self.dashboard_interface.getSelectedPump()
         log.info(f"Starting Pump {pump_number}")
-        # await self.update_pump_state_tag(pump_number, 0)
-        # await asyncio.sleep(0.5)
         await self.update_pump_state_tag(pump_number, 2)
         
     async def stop_pump_callback(self, di, di_value, dt_secs, counter, edge):
@@ -192,36 +220,47 @@ class NapdLocalControlApplication(Application):
         """Update dashboard with data from various sources."""
         # try:
             # Get pump control data from simulators
-        target_rate = self.get_tag("TargetRate", self.config.pump_1.value) 
-        flow_rate = self.get_tag("FlowRate", self.config.pump_1.value) 
-        pump_state = self.get_tag("StateString", self.config.pump_1.value) 
+        pump_state = self.get_tag("AppState", self.config.pump_1.value)
+        pump_2_state = self.get_tag("AppState", self.config.pump_2.value)
         
-        # Update pump data
-        self.dashboard_interface.update_pump_data(
-            target_rate=target_rate,
-            flow_rate=flow_rate,
-            pump_state=pump_state
-        )
+        # if pump_state != self.p1_app_state or pump_state in ["tank_level_low_low_level", "pressure_high_high_level"]:
+        self.p1_app_state = pump_state
+        await self.pump_1_state_change_cb(None, pump_state)
+        # if pump_2_state != self.p2_app_state or pump_2_state in ["tank_level_low_low_level", "pressure_high_high_level"]:
+        self.p2_app_state = pump_2_state
+        await self.pump_2_state_change_cb(None, pump_2_state)
         
+        
+        target_rate = self.get_tag("TargetRate", self.config.pump_1.value)
+        flow_rate = self.get_tag("FlowRate", self.config.pump_1.value)
+        # pump_state = self.get_tag("StateString", self.config.pump_1.value)
+        pump_data = {}
+        if target_rate is not None:
+            pump_data["target_rate"] = target_rate
+        if flow_rate is not None:
+            pump_data["flow_rate"] = flow_rate
+        # if pump_state is not None:
+        #     pump_data["pump_state"] = pump_state
         # Get pump 2 control data from simulators
         # if len(self.config.pump_controllers.elements) > 1:
         pump2_target_rate = self.get_tag("TargetRate", self.config.pump_2.value)
         pump2_flow_rate = self.get_tag("FlowRate", self.config.pump_2.value)
-        pump2_pump_state = self.get_tag("StateString", self.config.pump_2.value)
+        # pump2_pump_state = self.get_tag("StateString", self.config.pump_2.value)
+        pump2_data = {}
+        if pump2_target_rate is not None:
+            pump2_data["target_rate"] = pump2_target_rate
+        if pump2_flow_rate is not None:
+            pump2_data["flow_rate"] = pump2_flow_rate
+        # if pump2_pump_state is not None:
+        #     pump2_data["pump_state"] = pump2_pump_state
         # else:
         #     # Fallback values for pump 2 if not configured
         #     pump2_target_rate = "-"
         #     pump2_flow_rate = "-"
         #     pump2_pump_state = "-"
         
-        # Update pump 2 data
-        self.dashboard_interface.update_pump2_data(
-            target_rate=pump2_target_rate,
-            flow_rate=pump2_flow_rate,
-            pump_state=pump2_pump_state
-        )
-        
         # Get and aggregate solar control data from all simulators
+        solar_data = {}
         if self.config.solar_controllers:
             battery_voltages = []
             battery_percentages = []
@@ -265,39 +304,49 @@ class NapdLocalControlApplication(Application):
                 battery_ah = sum(battery_ah_values) 
             else:
                 battery_ah = 0.0
+
+            solar_data = {
+                "battery_voltage": battery_voltage,
+                "battery_percentage": battery_percentage,
+                "panel_power": panel_voltage,
+                "battery_ah": battery_ah,
+            }
             
-        # else:
-        #     # Fallback values if no solar controllers configured
-        #     battery_voltage = 24.5
-        #     battery_percentage = 78.0
-        #     panel_power = 150.0
-        #     battery_ah = 120.0
-        
-        # Update solar data
-        self.dashboard_interface.update_solar_data(
-            battery_voltage=battery_voltage,
-            battery_percentage=battery_percentage,
-            array_voltage=panel_voltage,
-            battery_ah=battery_ah
-        )
-        
         # Get tank control data from simulators
         tank_level_m = self.get_tag("level_reading", self.config.tank_level_app.value) if self.config.tank_level_app.value else None
         tank_level_mm = None
         if tank_level_m is not None:
             tank_level_mm = tank_level_m * 1000
         tank_level_percent = self.get_tag("level_filled_percentage", self.config.tank_level_app.value) if self.config.tank_level_app.value else None
-        
-        # Update tank data
-        self.dashboard_interface.update_tank_data(
-            tank_level_mm=tank_level_mm,
-            tank_level_percent=tank_level_percent
-        )
-        
-        self.dashboard_interface.update_skid_data(
-            skid_flow=self.get_tag("value", self.config.flow_sensor_app.value),
-            skid_pressure=self.get_tag("value", self.config.pressure_sensor_app.value)
-        )
+
+        tank_data = {}
+        if tank_level_mm is not None:
+            tank_data["tank_level_mm"] = tank_level_mm
+        if tank_level_percent is not None:
+            tank_data["tank_level_percent"] = tank_level_percent
+
+        # skid_flow = self.get_tag("value", self.config.flow_sensor_app.value)
+        skid_pressure = self.get_tag("value", self.config.pressure_sensor_app.value)
+        skid_data = {}
+        # if skid_flow is not None:
+        #     skid_data["skid_flow"] = skid_flow
+        if skid_pressure is not None:
+            skid_data["skid_pressure"] = skid_pressure
+
+        update_payload = {}
+        if pump_data:
+            update_payload["pump"] = pump_data
+        if pump2_data:
+            update_payload["pump2"] = pump2_data
+        if solar_data:
+            update_payload["solar"] = solar_data
+        if tank_data:
+            update_payload["tank"] = tank_data
+        if skid_data:
+            update_payload["skid"] = skid_data
+
+        if update_payload:
+            self.dashboard_interface.dashboard.update_data(**update_payload)
             
             # Update system status
             # system_status = "running" if self.state.state == "on" else "standby"

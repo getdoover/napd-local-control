@@ -151,20 +151,20 @@ class DashboardData:
         
         if "solar" in data:
             solar = data["solar"]
-            changed |= self._update_numeric("battery_voltage", solar.get("battery_voltage"), tolerance=0.05)
+            changed |= self._update_numeric("battery_voltage", solar.get("battery_voltage"), tolerance=0.1)
             changed |= self._update_numeric("battery_percentage", solar.get("battery_percentage"), tolerance=0.2)
-            changed |= self._update_numeric("panel_power", solar.get("panel_power"), tolerance=0.05)
+            changed |= self._update_numeric("panel_power", solar.get("panel_power"), tolerance=0.1)
             changed |= self._update_numeric("battery_ah", solar.get("battery_ah"), tolerance=0.1)
         
         if "tank" in data:
             tank = data["tank"]
             changed |= self._update_numeric("tank_level_mm", tank.get("tank_level_mm"), tolerance=1.0)
-            changed |= self._update_numeric("tank_level_percent", tank.get("tank_level_percent"), tolerance=0.5)
+            changed |= self._update_numeric("tank_level_percent", tank.get("tank_level_percent"), tolerance=1)
         
         if "skid" in data:
             skid = data["skid"]
             changed |= self._update_numeric("skid_flow", skid.get("skid_flow"), tolerance=0.1)
-            changed |= self._update_numeric("skid_pressure", skid.get("skid_pressure"), tolerance=0.1)
+            changed |= self._update_numeric("skid_pressure", skid.get("skid_pressure"), tolerance=10)
         
         if "system" in data:
             system = data["system"]

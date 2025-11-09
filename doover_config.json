@@ -48,6 +48,18 @@
                     "type": "integer",
                     "description": "The start pump (ai) pin"
                 },
+                "start_pump_edge": {
+                    "enum": [
+                        "rising",
+                        "falling"
+                    ],
+                    "title": "Start Pump Edge",
+                    "x-name": "start_pump_edge",
+                    "x-hidden": false,
+                    "type": "string",
+                    "description": "The start pump edge",
+                    "default": "falling"
+                },
                 "stop_pump_pin": {
                     "title": "Stop Pump Pin",
                     "x-name": "stop_pump_pin",
@@ -69,12 +81,12 @@
                     "type": "integer",
                     "description": "The pump 1 start LED pin"
                 },
-                "pump_1_stop_led_pin": {
-                    "title": "Pump 1 Stop LED Pin",
-                    "x-name": "pump_1_stop_led_pin",
+                "pump_1_fault_led_pin": {
+                    "title": "Pump 1 Fault LED Pin",
+                    "x-name": "pump_1_fault_led_pin",
                     "x-hidden": false,
                     "type": "integer",
-                    "description": "The pump 1 stop LED pin"
+                    "description": "The pump 1 fault LED pin"
                 },
                 "pump_2_start_led_pin": {
                     "title": "Pump 2 Start LED Pin",
@@ -83,12 +95,12 @@
                     "type": "integer",
                     "description": "The pump 2 start LED pin"
                 },
-                "pump_2_stop_led_pin": {
-                    "title": "Pump 2 Stop LED Pin",
-                    "x-name": "pump_2_stop_led_pin",
+                "pump_2_fault_led_pin": {
+                    "title": "Pump 2 Fault LED Pin",
+                    "x-name": "pump_2_fault_led_pin",
                     "x-hidden": false,
                     "type": "integer",
-                    "description": "The pump 2 stop LED pin"
+                    "description": "The pump 2 fault LED pin"
                 },
                 "solar_controllers": {
                     "title": "Solar Controllers",
@@ -139,9 +151,9 @@
                 "stop_pump_pin",
                 "potentiometer_pin",
                 "pump_1_start_led_pin",
-                "pump_1_stop_led_pin",
+                "pump_1_fault_led_pin",
                 "pump_2_start_led_pin",
-                "pump_2_stop_led_pin",
+                "pump_2_fault_led_pin",
                 "solar_controllers",
                 "flow_sensor_app",
                 "pressure_sensor_app",

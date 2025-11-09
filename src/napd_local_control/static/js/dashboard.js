@@ -273,9 +273,9 @@ class Dashboard {
     
     updateSkidData(skidData) {
         // Update skid flow
-        if (skidData.skid_flow !== undefined) {
-            this.updateValueChange(this.skidFlow, skidData.skid_flow.toFixed(1));
-        }
+        // if (skidData.skid_flow !== undefined) {
+        //     this.updateValueChange(this.skidFlow, skidData.skid_flow.toFixed(1));
+        // }
         
         // Update skid pressure
         if (skidData.skid_pressure !== undefined) {
