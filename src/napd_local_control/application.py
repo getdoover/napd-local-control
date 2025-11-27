@@ -114,11 +114,11 @@ class NapdLocalControlApplication(Application):
         if "pressure_high_high_level" == new_value:
             if not self.hh_pressure_active:
                 self.hh_pressure_active = True
-                await self.set_tag("StateWrite", 0, pump_app)
+                await self.set_tag("State", 0, pump_app)
         elif "tank_level_low_low_level" == new_value:
             if not self.ll_tank_level_active:
                 self.ll_tank_level_active = True
-                await self.set_tag("StateWrite", 0, pump_app)
+                await self.set_tag("State", 0, pump_app)
         
         self.dashboard_interface.set_faults(
             hh_pressure=self.hh_pressure_active,
@@ -207,9 +207,9 @@ class NapdLocalControlApplication(Application):
     async def update_pump_state_tag(self, pump_number, state):
         
         if pump_number == 1:
-            await self.set_tag("StateWrite", state, self.config.pump_1.value)
+            await self.set_tag("State", state, self.config.pump_1.value)
         elif pump_number == 2:
-            await self.set_tag("StateWrite", state, self.config.pump_2.value)
+            await self.set_tag("State", state, self.config.pump_2.value)
         
 
     async def update_dashboard_data(self):
