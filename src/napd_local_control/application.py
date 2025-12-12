@@ -207,9 +207,9 @@ class NapdLocalControlApplication(Application):
     async def update_pump_state_tag(self, pump_number, state):
         
         if pump_number == 1:
-            await self.set_tag("State", state, self.config.pump_1.value)
+            await self.set_tag("StateControlTag", state, self.config.pump_1.value)
         elif pump_number == 2:
-            await self.set_tag("State", state, self.config.pump_2.value)
+            await self.set_tag("StateControlTag", state, self.config.pump_2.value)
         
 
     async def update_dashboard_data(self):
