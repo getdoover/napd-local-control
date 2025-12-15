@@ -9,6 +9,15 @@ from pydoover.utils.kalman import apply_async_kalman_filter
 from .app_config import NapdLocalControlConfig, EdgeChoice
 from .dashboard import NAPDDashboard, DashboardInterface
 
+try:
+    import grpc
+    from grpc.aio import AioRpcError
+    StatusCode = grpc.StatusCode
+except ImportError:
+    # Fallback if grpc is not available
+    AioRpcError = Exception
+    StatusCode = type('StatusCode', (), {'DEADLINE_EXCEEDED': 4})()
+
 log = logging.getLogger()
 
 class NapdLocalControlApplication(Application):
@@ -29,6 +38,32 @@ class NapdLocalControlApplication(Application):
         self.hh_pressure_active = False
         self.ll_tank_level_active = False
 
+    async def _retry_pulse_counter(self, func, *args, **kwargs):
+        """Retry a pulse counter operation until it succeeds, handling DEADLINE_EXCEEDED errors."""
+        max_retries = None  # Retry indefinitely
+        retry_delay = 1.0  # Start with 1 second delay
+        
+        while True:
+            try:
+                return func(*args, **kwargs)
+            except AioRpcError as e:
+                if e.code() == StatusCode.DEADLINE_EXCEEDED:
+                    log.warning(
+                        f"DEADLINE_EXCEEDED error creating pulse counter, retrying in {retry_delay}s... "
+                        f"(Error: {e.details()})"
+                    )
+                    await asyncio.sleep(retry_delay)
+                    # Exponential backoff with max delay of 5 seconds
+                    retry_delay = min(retry_delay * 1.5, 5.0)
+                else:
+                    # Re-raise if it's a different error
+                    log.error(f"Unexpected gRPC error creating pulse counter: {e}")
+                    raise
+            except Exception as e:
+                # Re-raise any other exceptions
+                log.error(f"Unexpected error creating pulse counter: {e}")
+                raise
+
     async def setup(self):
         self.loop_target_period = 0.2
         
@@ -37,7 +72,8 @@ class NapdLocalControlApplication(Application):
         
         ## create button and dial pulse counting subs
         
-        self.selector_button = self.platform_iface.get_new_pulse_counter(
+        self.selector_button = await self._retry_pulse_counter(
+            self.platform_iface.get_new_pulse_counter,
             di=self.config.selector_pin.value,
             edge="rising",
             callback=self.selector_button_callback,
@@ -45,14 +81,16 @@ class NapdLocalControlApplication(Application):
         )
         
         edge = "VI+18" if self.config.start_pump_edge_rising else "VI-18"
-        self.start_pump = self.platform_iface.get_new_pulse_counter(
+        self.start_pump = await self._retry_pulse_counter(
+            self.platform_iface.get_new_pulse_counter,
             di=self.config.start_pump_pin.value,
             edge=edge,
             callback=self.start_pump_callback,
             rate_window_secs=60,
         )
         
-        self.stop_pump = self.platform_iface.get_new_pulse_counter(
+        self.stop_pump = await self._retry_pulse_counter(
+            self.platform_iface.get_new_pulse_counter,
             di=self.config.stop_pump_pin.value,
             edge="rising",
             callback=self.stop_pump_callback,
