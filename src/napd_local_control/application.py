@@ -152,11 +152,11 @@ class NapdLocalControlApplication(Application):
         if "pressure_high_high_level" == new_value:
             if not self.hh_pressure_active:
                 self.hh_pressure_active = True
-                await self.set_tag("State", 0, pump_app)
+                await self.set_tag("StateWriteTag", 0, pump_app)
         elif "tank_level_low_low_level" == new_value:
             if not self.ll_tank_level_active:
                 self.ll_tank_level_active = True
-                await self.set_tag("State", 0, pump_app)
+                await self.set_tag("StateWriteTag", 0, pump_app)
         
         self.dashboard_interface.set_faults(
             hh_pressure=self.hh_pressure_active,
